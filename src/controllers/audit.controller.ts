@@ -6,6 +6,11 @@ import type {
 
 import { auditRequestSchema } from "../schemas/audit.schema.js";
 import { auditUrl } from "../services/audit.service.js";
+import {
+  getCachedAudit,
+  setCachedAudit,
+} from "../services/cache.service.js";
+import { auditSemaphore } from "../services/concurrency.service.js";
 import { AppError } from "../utils/appError.js";
 import { normalizeUrl } from "../utils/url.js";
 
@@ -28,7 +33,26 @@ export async function createAudit(
 
     const normalizedUrl = normalizeUrl(parsed.data.url);
 
-    const result = await auditUrl(normalizedUrl);
+    // Check the cache before performing an expensive audit.
+    const cachedResult = getCachedAudit(normalizedUrl);
+
+    if (cachedResult) {
+      res.status(200).json({
+        success: true,
+        cached: true,
+        data: cachedResult,
+      });
+
+      return;
+    }
+
+    // Only a configured number of audits can execute simultaneously.
+    const result = await auditSemaphore.run(() =>
+      auditUrl(normalizedUrl)
+    );
+
+    // Store successful audits in cache.
+    setCachedAudit(normalizedUrl, result);
 
     res.status(200).json({
       success: true,

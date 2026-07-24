@@ -1,6 +1,9 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
+import { getCacheSize } from "./services/cache.service.js";
+import { auditSemaphore } from "./services/concurrency.service.js";
+import { env } from "./config/env.js";
 
 import { auditRouter } from "./routes/audit.routes.js";
 import { errorHandler } from "./middleware/error.middleware.js";
@@ -32,6 +35,18 @@ app.get("/health", (_req, res) => {
     status: "ok",
     uptime: Math.floor(process.uptime()),
     timestamp: new Date().toISOString(),
+
+    cache: {
+      entries: getCacheSize(),
+      maxEntries: env.CACHE_MAX_ITEMS,
+      ttlSeconds: env.CACHE_TTL_SECONDS,
+    },
+
+    concurrency: {
+      active: auditSemaphore.getActiveCount(),
+      queued: auditSemaphore.getQueueLength(),
+      limit: env.MAX_CONCURRENT_AUDITS,
+    },
   });
 });
 

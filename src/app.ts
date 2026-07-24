@@ -1,12 +1,14 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
+
+import { env } from "./config/env.js";
+import { errorHandler } from "./middleware/error.middleware.js";
+import { requestIdMiddleware } from "./middleware/requestId.middleware.js";
+import { requestLoggerMiddleware } from "./middleware/requestLogger.middleware.js";
+import { auditRouter } from "./routes/audit.routes.js";
 import { getCacheSize } from "./services/cache.service.js";
 import { auditSemaphore } from "./services/concurrency.service.js";
-import { env } from "./config/env.js";
-
-import { auditRouter } from "./routes/audit.routes.js";
-import { errorHandler } from "./middleware/error.middleware.js";
 
 export const app = express();
 
@@ -21,12 +23,19 @@ app.use(
   })
 );
 
+// Must come before routes so every request receives an ID.
+app.use(requestIdMiddleware);
+
+// Logger uses the request ID created above.
+app.use(requestLoggerMiddleware);
+
 app.get("/", (_req, res) => {
   res.status(200).json({
     name: "PagePulse",
     version: "1.0.0",
     description: "Production-grade URL audit service",
     status: "running",
+    requestId: res.locals.requestId,
   });
 });
 
@@ -55,6 +64,7 @@ app.use("/api/v1/audits", auditRouter);
 app.use((_req, res) => {
   res.status(404).json({
     success: false,
+    requestId: res.locals.requestId,
     error: {
       code: "NOT_FOUND",
       message: "The requested endpoint does not exist.",
@@ -62,4 +72,5 @@ app.use((_req, res) => {
   });
 });
 
+// Error handler must remain last.
 app.use(errorHandler);

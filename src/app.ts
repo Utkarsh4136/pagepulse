@@ -30,13 +30,34 @@ app.use(requestIdMiddleware);
 app.use(requestLoggerMiddleware);
 
 app.get("/", (_req, res) => {
-  res.status(200).json({
-    name: "PagePulse",
-    version: "1.0.0",
-    description: "Production-grade URL audit service",
-    status: "running",
-    requestId: res.locals.requestId,
-  });
+  res.status(200).type("html").send(`
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>PagePulse API</title>
+      </head>
+
+      <body>
+        <main>
+          <h1>PagePulse</h1>
+          <p>Production-grade URL audit service</p>
+          <p>Status: Running</p>
+        </main>
+
+        <footer>
+          <a
+            href="https://digitalheroesco.com"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Built for Digital Heroes Training Task
+          </a>
+        </footer>
+      </body>
+    </html>
+  `);
 });
 
 app.get("/health", (_req, res) => {
@@ -44,6 +65,7 @@ app.get("/health", (_req, res) => {
     status: "ok",
     uptime: Math.floor(process.uptime()),
     timestamp: new Date().toISOString(),
+    requestId: res.locals.requestId,
 
     cache: {
       entries: getCacheSize(),

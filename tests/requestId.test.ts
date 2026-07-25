@@ -6,7 +6,7 @@ import { app } from "../src/app.js";
 describe("Request ID middleware", () => {
   it("generates a request ID", async () => {
     const response = await request(app)
-      .get("/")
+      .get("/health")
       .expect(200);
 
     expect(response.body.requestId).toEqual(
@@ -22,7 +22,7 @@ describe("Request ID middleware", () => {
     const requestId = "pagepulse-test-123";
 
     const response = await request(app)
-      .get("/")
+      .get("/health")
       .set("x-request-id", requestId)
       .expect(200);
 
